@@ -17,7 +17,7 @@ const graphics = {
 }
 
 
-function drawButton(index, icon, fillColor, backgroundColor){
+async function drawButton(streamDeck ,index, icon, fillColor, backgroundColor){
 	const {canvas, ctx } = graphics.buttons[index];
 	console.time('button')
 	ctx.fillStyle = backgroundColor;
@@ -27,9 +27,11 @@ function drawButton(index, icon, fillColor, backgroundColor){
 	ctx.textBaseline = 'middle';
 	ctx.fillStyle = fillColor;
 	ctx.fillText(icon, 55, 55)
-	const buffer = canvas.toBuffer('raw');
+	const buffer = canvas.toBuffer('image/jpeg',{ quality: 0.95 });
 	console.timeEnd('button')
-  return buffer;
+
+	const reports = streamDeck.device.generateFillImageWrites(index,buffer)
+	await streamDeck.device.device.sendReports(reports)
 }
 
 async function drawLcd(streamdek, len = 100){
@@ -68,12 +70,14 @@ await fillLcd()
 
 
 streamDeck.on('down', (keyIndex) => {
-  streamDeck.fillKeyBuffer(keyIndex, drawButton(keyIndex, keyIndex, "black", "white"), {format: 'bgra'}); 
+	drawButton(streamDeck, keyIndex,keyIndex,  "black", "white")
+  // streamDeck.fillKeyBuffer(keyIndex, drawButton(keyIndex, keyIndex, "black", "white"), {format: 'bgra'}); 
 	console.log('Filling button #%d', keyIndex)
 })
 
 streamDeck.on('up', (keyIndex) => {
-  streamDeck.fillKeyBuffer(keyIndex, drawButton(keyIndex, keyIndex, "white", "black"), {format: 'bgra'}); 
+	drawButton(streamDeck, keyIndex,keyIndex,  "white", "black")
+  // streamDeck.fillKeyBuffer(keyIndex, drawButton(keyIndex, keyIndex, "white", "black"), {format: 'bgra'}); 
 	console.log('Clearing button #%d', keyIndex)
 })
 
