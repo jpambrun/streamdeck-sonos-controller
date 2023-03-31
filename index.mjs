@@ -32,7 +32,7 @@ function drawButton(index, icon, fillColor, backgroundColor){
   return buffer;
 }
 
-function drawLcd(len = 100){
+async function drawLcd(streamdek, len = 100){
 	const {canvas, ctx } = graphics.lcd;
 	console.time('lcd')
 	ctx.clearRect(0, 0, 800,100);
@@ -40,10 +40,12 @@ function drawLcd(len = 100){
   ctx.fillRect(10, 10, len, 80);
 	ctx.font = 'Book 40px JetBrainsMono Nerd Font Mono'
 	ctx.fillStyle = "red";
-	ctx.fillText('Everyone', 100, 40);
-	const buffer = canvas.toBuffer('raw');
+	ctx.fillText('Everyone312', 100, 40);
+	const buffer = canvas.toBuffer('image/jpeg',{ quality: 0.95 });
 	console.timeEnd('lcd')
-  return buffer;
+
+	const reports = streamDeck.device.generateFillLcdWrites(0,0,buffer, {width:800, height:100})
+	await streamDeck.device.device.sendReports(reports)
 }
 
 
@@ -51,7 +53,8 @@ let state =100;
 
 
 const streamDeck = openStreamDeck()
-const fillLcd= pDebounce(streamDeck.fillLcdRegion.bind(streamDeck), 20,{before: false});
+
+const fillLcd= pDebounce(drawLcd.bind(null, streamDeck), 20,{before: false});
 
 streamDeck.clearPanel()
 console.log(streamDeck)
@@ -60,9 +63,8 @@ if (streamDeck.MODEL !== DeviceModelId.PLUS) throw new Error('Unsupported device
 
 console.log('connected');
 
-
-streamDeck.fillKeyBuffer(0, drawButton(0, fav, "black", "white"), {format: 'bgra'}); 
-streamDeck.fillLcdRegion(0, 0, drawLcd(), { width: 800, height: 100, stride: 800 * 4, offset: 0, format: 'bgra', })
+// streamDeck.fillKeyBuffer(0, drawButton(0, fav, "black", "white"), {format: 'bgra'}); 
+await fillLcd()
 
 
 streamDeck.on('down', (keyIndex) => {
@@ -84,13 +86,13 @@ streamDeck.on('encoderUp', (index) => {
 
 
 streamDeck.on('rotateLeft', (index, amount) => {
-	state -= amount;
-	fillLcd(0, 0, drawLcd(state), { width: 800, height: 100, stride: 800 * 4, offset: 0, format: 'bgra', })
+	state -= amount*5;
+	fillLcd(state)
 	console.log('Encoder left #%d (%d)', index, amount)
 })
 streamDeck.on('rotateRight', (index, amount) => {
-	state += amount;
-	fillLcd(0, 0, drawLcd(state), { width: 800, height: 100, stride: 800 * 4, offset: 0, format: 'bgra', })
+	state += amount*5;
+	fillLcd(state)
 	console.log('Encoder right #%d (%d)', index, amount)
 })
 
