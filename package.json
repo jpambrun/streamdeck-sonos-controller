@@ -12,6 +12,7 @@
     "@elgato-stream-deck/node": "^5.7.2",
     "@julusian/jpeg-turbo": "^2.1.0",
     "canvas": "^2.11.0",
+    "lru-cache": "^8.0.4",
     "p-debounce": "^4.0.0"
   }
 }
