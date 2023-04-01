@@ -34,7 +34,7 @@ async function drawButton(streamDeck ,index, icon, fillColor, backgroundColor){
 	await streamDeck.device.device.sendReports(reports)
 }
 
-async function drawLcd(streamdek, len = 100){
+async function drawLcd(streamDeck, len = 100){
 	const {canvas, ctx } = graphics.lcd;
 	console.time('lcd')
 	ctx.clearRect(0, 0, 800,100);
@@ -59,15 +59,12 @@ const streamDeck = openStreamDeck()
 const fillLcd= pDebounce(drawLcd.bind(null, streamDeck), 20,{before: false});
 
 streamDeck.clearPanel()
-console.log(streamDeck)
 
-if (streamDeck.MODEL !== DeviceModelId.PLUS) throw new Error('Unsupported device')
 
 console.log('connected');
 
 // streamDeck.fillKeyBuffer(0, drawButton(0, fav, "black", "white"), {format: 'bgra'}); 
 await fillLcd()
-
 
 streamDeck.on('down', (keyIndex) => {
 	drawButton(streamDeck, keyIndex,keyIndex,  "black", "white")
@@ -87,7 +84,6 @@ streamDeck.on('encoderDown', (index) => {
 streamDeck.on('encoderUp', (index) => {
 	console.log('Encoder up #%d', index)
 })
-
 
 streamDeck.on('rotateLeft', (index, amount) => {
 	state -= amount*5;
