@@ -1,5 +1,5 @@
-import {openStreamDeck, DeviceModelId } from '@elgato-stream-deck/node'
-import { createCanvas, registerFont }  from 'canvas'
+import {openStreamDeck } from '@elgato-stream-deck/node'
+import { createCanvas, registerFont, loadImage }  from 'canvas'
 import pDebounce from 'p-debounce';
 import {fav, next} from './icons.mjs';
 
@@ -34,15 +34,20 @@ async function drawButton(streamDeck ,index, icon, fillColor, backgroundColor){
 	await streamDeck.device.device.sendReports(reports)
 }
 
-async function drawLcd(streamDeck, len = 100){
+async function drawLcdFromSonos(streamDeck, sonosState, artImg){
 	const {canvas, ctx } = graphics.lcd;
 	console.time('lcd')
 	ctx.clearRect(0, 0, 800,100);
+	// ctx.fillStyle = "white";
+  // ctx.fillRect(10, 10, len, 80);
+	ctx.font = 'Book 20px JetBrainsMono Nerd Font Mono'
 	ctx.fillStyle = "white";
-  ctx.fillRect(10, 10, len, 80);
-	ctx.font = 'Book 40px JetBrainsMono Nerd Font Mono'
-	ctx.fillStyle = "red";
-	ctx.fillText('Everyone312', 100, 40);
+	ctx.textBaseline = 'top';
+	ctx.fillText(sonosState.currentTrack.artist, 104, 0);
+	ctx.fillText(sonosState.currentTrack.title, 104, 20);
+	if(artImg){
+  	ctx.drawImage(artImg, 0, 0, 100, 100)
+	}
 	const buffer = canvas.toBuffer('image/jpeg',{ quality: 0.95 });
 	console.timeEnd('lcd')
 
@@ -51,20 +56,38 @@ async function drawLcd(streamDeck, len = 100){
 }
 
 
-let state =100;
+const state = {num:100};
+
 
 
 const streamDeck = openStreamDeck()
 
-const fillLcd= pDebounce(drawLcd.bind(null, streamDeck), 20,{before: false});
+const fillLcd= pDebounce(drawLcdFromSonos.bind(null, streamDeck), 20,{before: false});
 
-streamDeck.clearPanel()
+
+
+//streamDeck.clearPanel()
+async function getSonosState(){
+  const response = await fetch("http://127.0.0.1:5005/JF%27s%20Office/state");
+	const responseJson = await response.json();
+	fillLcd(responseJson)
+  const artImg = await loadImage(responseJson.currentTrack.absoluteAlbumArtUri);
+	fillLcd(responseJson, artImg);
+	
+}
+
+getSonosState();
+
+fetch("http://127.0.0.1:5005/JF%27s%20Office/state")
+  .then((response) => response.json())
+  .then((data) => {
+	console.log(data);fillLcd(data)}
+);
 
 
 console.log('connected');
 
 // streamDeck.fillKeyBuffer(0, drawButton(0, fav, "black", "white"), {format: 'bgra'}); 
-await fillLcd()
 
 streamDeck.on('down', (keyIndex) => {
 	drawButton(streamDeck, keyIndex,keyIndex,  "black", "white")
@@ -86,13 +109,13 @@ streamDeck.on('encoderUp', (index) => {
 })
 
 streamDeck.on('rotateLeft', (index, amount) => {
-	state -= amount*5;
-	fillLcd(state)
+	state.num -= amount*5;
+	fillLcd(state.num)
 	console.log('Encoder left #%d (%d)', index, amount)
 })
 streamDeck.on('rotateRight', (index, amount) => {
-	state += amount*5;
-	fillLcd(state)
+	state.num += amount*5;
+	fillLcd(state.num)
 	console.log('Encoder right #%d (%d)', index, amount)
 })
 
