@@ -7,19 +7,14 @@ import LRUCache from 'lru-cache'
 const artCache = new LRUCache({
 	max: 10,
 	fetchMethod: async (key, oldValue, { signal }) => {
-		// note: do NOT pass the signal to fetch()!
-		// let's say this fetch can take a long time.
 		console.log('fetching art')
 		return await loadImage(key).catch()
 	},
 });
 
-
 function truncate(str, n) {
 	return (str.length > n) ? str.slice(0, n - 1) + '…' : str;
 }
-
-registerFont('font.ttf', { family: 'JetBrainsMono Nerd Font Mono', weight: 'Book' })
 
 const graphics = {
 	buttons: Array.from({ length: 8 }, () => {
@@ -31,7 +26,6 @@ const graphics = {
 		return { canvas, ctx: canvas.getContext('2d') }
 	})()
 }
-
 
 async function drawButton(streamDeck, index, icon, fillColor, backgroundColor) {
 	const { canvas, ctx } = graphics.buttons[index];
@@ -51,9 +45,9 @@ async function drawButton(streamDeck, index, icon, fillColor, backgroundColor) {
 }
 
 async function drawLcdFromSonos(streamDeck) {
-	const {sonosState, lastVolumeChangeTime} = state;
-	if(!sonosState) return;
-	const elapsed = sonosState.elapsedTime;
+	const { sonosState, lastVolumeChangeTime } = state;
+	if (!sonosState) return;
+	const { elapsedTime, volume } = sonosState;
 	const { duration, absoluteAlbumArtUri } = sonosState.currentTrack;
 	const { canvas, ctx } = graphics.lcd;
 	console.time('lcd')
@@ -65,10 +59,16 @@ async function drawLcdFromSonos(streamDeck) {
 	ctx.fillText(truncate(sonosState.currentTrack.artist, 24), 104, 0);
 	ctx.fillText(truncate(sonosState.currentTrack.title, 24), 104, 20);
 	ctx.strokeRect(104, 46, 296, 16)
-	ctx.fillRect(104, 46, Math.floor(296 * elapsed / duration), 16)
+	ctx.fillRect(104, 46, Math.floor(296 * elapsedTime / duration), 16)
 	ctx.fillText(`${Math.floor(duration / 60)}:${duration % 60}`, 104, 60);
 	if (artCache.has(absoluteAlbumArtUri)) {
 		ctx.drawImage(artCache.get(absoluteAlbumArtUri), 0, 0, 100, 100)
+	}
+
+	if (lastVolumeChangeTime > Date.now() - 2000) {
+		ctx.clearRect(36, 36, 728, 28);
+		ctx.strokeRect(40, 40, 720, 20)
+		ctx.fillRect(40, 40, Math.floor(720 * volume / 100), 20)
 	}
 	const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
 	console.timeEnd('lcd')
@@ -77,20 +77,21 @@ async function drawLcdFromSonos(streamDeck) {
 	await streamDeck.device.device.sendReports(reports)
 }
 
+registerFont('font.ttf', { family: 'JetBrainsMono Nerd Font Mono', weight: 'Book' })
 const streamDeck = openStreamDeck()
 
 
 //streamDeck.clearPanel()
-const state ={
-  sonosState: undefined,
+const state = {
+	sonosState: undefined,
 	lastVolumeChangeTime: 0,
 }
 
 async function getSonosState() {
 	const response = await fetch("http://127.0.0.1:5005/JF%27s%20Office/state");
 	const responseJson = await response.json();
-  state.sonosState = responseJson;
-	
+	state.sonosState = responseJson;
+
 	if (responseJson.playbackState === 'PLAYING') {
 		drawButton(streamDeck, 1, buttonsIcon[1], "black", "white")
 	} else {
@@ -105,18 +106,7 @@ const drawLcdFromSonosDebounced = pDebounce(drawLcdFromSonos.bind(null, streamDe
 const getSonosStateDebounced = pDebounce(getSonosState, 20, { before: false });
 
 getSonosStateDebounced();
-
-
 setInterval(getSonosStateDebounced, 1000);
-
-// fetch("http://127.0.0.1:5005/JF%27s%20Office/state")
-//   .then((response) => response.json())
-//   .then((data) => {
-// 	console.log(data);drawLcdFromSonosDebounced(data)}
-// );
-
-
-console.log('connected');
 
 const buttonsIcon = [prev, plaupause, next, fav, 1, 2, 3, 4]
 const downFct = [
