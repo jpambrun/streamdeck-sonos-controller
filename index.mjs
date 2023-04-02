@@ -3,6 +3,11 @@ import { createCanvas, registerFont, loadImage } from 'canvas'
 import pDebounce from 'p-debounce';
 import { fav, next, prev, plaupause } from './icons.mjs';
 import LRUCache from 'lru-cache'
+import EventSource from 'eventsource'
+
+const es = new EventSource('http://127.0.0.1:5005/events');
+es.onerror = console.log
+
 
 const artCache = new LRUCache({
 	max: 10,
@@ -65,7 +70,7 @@ async function render(streamDeck) {
 	ctx.fillText(truncate(sonosState.currentTrack.title, 24), 104, 20);
 	ctx.strokeRect(104, 46, 296, 16)
 	ctx.fillRect(104, 46, Math.floor(296 * elapsedTime / duration), 16)
-	ctx.fillText(`${Math.floor(duration / 60)}:${duration % 60}`, 104, 60);
+	ctx.fillText(`${Math.floor(duration / 60)}:${duration % 60 <= 9 ? '0' : ''}${duration % 60}`, 104, 60);
 	if (artCache.has(absoluteAlbumArtUri)) {
 		ctx.putImageData(await artCache.get(absoluteAlbumArtUri), 0, 0);
 	}
@@ -111,29 +116,40 @@ const drawLcdFromSonosDebounced = pDebounce(render.bind(null, streamDeck), 20, {
 const getSonosStateDebounced = pDebounce(getSonosState, 20, { before: false });
 
 getSonosStateDebounced();
-setInterval(getSonosStateDebounced, 1000);
+setInterval(getSonosStateDebounced, 500);
+
+es.onmessage = (e) => {
+	const msg = JSON.parse(e.data);
+	const { type, data } = msg;
+	if (data.roomName !== "JF's Office") return;
+	console.log(`event: ${type}`)
+	if (type === 'volume-change') {
+		state.sonosState.volume = data.newVolume;
+		drawLcdFromSonosDebounced(streamDeck)
+	} else if (type === 'transport-state') {
+		state.sonosState = data.state;
+		drawLcdFromSonosDebounced(streamDeck)
+	} else {
+		console.warn(`unknown event type: ${type}`);
+	}
+}
 
 const buttonsIcon = [prev, plaupause, next, fav, 1, 2, 3, 4]
 const downFct = [
 	async () => {
 		await fetch("http://127.0.0.1:5005/JF%27s%20Office/previous");
-		getSonosState();
 	},
 	async () => {
 		await fetch("http://127.0.0.1:5005/JF%27s%20Office/playpause");
-		getSonosState();
 	},
 	async () => {
 		await fetch("http://127.0.0.1:5005/JF%27s%20Office/next");
-		getSonosState();
 	},
 ]
 const encoderFct = [
 	async (amount) => {
-		console.log('hrer',)
 		await fetch(`http://127.0.0.1:5005/JF%27s%20Office/volume/${amount > 0 ? '+' : ''}${amount * 2}`);
 		state.lastVolumeChangeTime = Date.now();
-		getSonosState();
 	},
 ]
 
@@ -141,20 +157,13 @@ buttonsIcon.map((icon, idx) => {
 	drawButton(streamDeck, idx, icon, "white", "black")
 });
 
-
-// streamDeck.fillKeyBuffer(0, drawButton(0, fav, "black", "white"), {format: 'bgra'}); 
-
 streamDeck.on('down', async (keyIndex) => {
 	drawButton(streamDeck, keyIndex, buttonsIcon[keyIndex], "black", "white")
 	await downFct[keyIndex]?.();
-	// streamDeck.fillKeyBuffer(keyIndex, drawButton(keyIndex, keyIndex, "black", "white"), {format: 'bgra'}); 
-	console.log('Filling button #%d', keyIndex)
 })
 
 streamDeck.on('up', async (keyIndex) => {
 	drawButton(streamDeck, keyIndex, buttonsIcon[keyIndex], "white", "black")
-	// streamDeck.fillKeyBuffer(keyIndex, drawButton(keyIndex, keyIndex, "white", "black"), {format: 'bgra'}); 
-	console.log('Clearing button #%d', keyIndex)
 })
 
 streamDeck.on('encoderDown', (index) => {
@@ -166,11 +175,9 @@ streamDeck.on('encoderUp', (index) => {
 
 streamDeck.on('rotateLeft', (index, amount) => {
 	encoderFct[index]?.(-amount)
-	console.log('Encoder left #%d (%d)', index, amount)
 })
 streamDeck.on('rotateRight', (index, amount) => {
 	encoderFct[index]?.(+amount)
-	console.log('Encoder right #%d (%d)', index, amount)
 })
 
 
