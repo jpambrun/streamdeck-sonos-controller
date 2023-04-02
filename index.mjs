@@ -7,16 +7,12 @@ import LRUCache from 'lru-cache'
 const artCache = new LRUCache({
 	max: 10,
 	fetchMethod: async (key, oldValue, { signal }) => {
-const thumbnailCanvas = createCanvas(100, 100)
-const thumbnailCtx = thumbnailCanvas.getContext('2d')
-
-		console.log('fetching art')
+		const thumbnailCanvas = createCanvas(100, 100)
+		const thumbnailCtx = thumbnailCanvas.getContext('2d')
 		const jpegImage = await loadImage(key).catch();
-		if(!jpegImage) return;
-		thumbnailCtx.drawImage(jpegImage,0,0,100,100);
-		console.log('drawn')
-		const imageDate = thumbnailCtx.getImageData(0,0,100,100) 
-		console.log('got')
+		if (!jpegImage) return;
+		thumbnailCtx.drawImage(jpegImage, 0, 0, 100, 100);
+		const imageDate = thumbnailCtx.getImageData(0, 0, 100, 100)
 		return imageDate;
 	},
 });
@@ -71,9 +67,7 @@ async function render(streamDeck) {
 	ctx.fillRect(104, 46, Math.floor(296 * elapsedTime / duration), 16)
 	ctx.fillText(`${Math.floor(duration / 60)}:${duration % 60}`, 104, 60);
 	if (artCache.has(absoluteAlbumArtUri)) {
-		// ctx.drawImage(artCache.get(absoluteAlbumArtUri), 0, 0, 100, 100)
-		console.log(await artCache.get(absoluteAlbumArtUri))
-		ctx.putImageData(await artCache.get(absoluteAlbumArtUri),0,0);
+		ctx.putImageData(await artCache.get(absoluteAlbumArtUri), 0, 0);
 	}
 
 	if (lastVolumeChangeTime > Date.now() - 2000) {
