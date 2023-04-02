@@ -7,8 +7,17 @@ import LRUCache from 'lru-cache'
 const artCache = new LRUCache({
 	max: 10,
 	fetchMethod: async (key, oldValue, { signal }) => {
+const thumbnailCanvas = createCanvas(100, 100)
+const thumbnailCtx = thumbnailCanvas.getContext('2d')
+
 		console.log('fetching art')
-		return await loadImage(key).catch()
+		const jpegImage = await loadImage(key).catch();
+		if(!jpegImage) return;
+		thumbnailCtx.drawImage(jpegImage,0,0,100,100);
+		console.log('drawn')
+		const imageDate = thumbnailCtx.getImageData(0,0,100,100) 
+		console.log('got')
+		return imageDate;
 	},
 });
 
@@ -44,7 +53,7 @@ async function drawButton(streamDeck, index, icon, fillColor, backgroundColor) {
 	await streamDeck.device.device.sendReports(reports)
 }
 
-async function drawLcdFromSonos(streamDeck) {
+async function render(streamDeck) {
 	const { sonosState, lastVolumeChangeTime } = state;
 	if (!sonosState) return;
 	const { elapsedTime, volume } = sonosState;
@@ -62,7 +71,9 @@ async function drawLcdFromSonos(streamDeck) {
 	ctx.fillRect(104, 46, Math.floor(296 * elapsedTime / duration), 16)
 	ctx.fillText(`${Math.floor(duration / 60)}:${duration % 60}`, 104, 60);
 	if (artCache.has(absoluteAlbumArtUri)) {
-		ctx.drawImage(artCache.get(absoluteAlbumArtUri), 0, 0, 100, 100)
+		// ctx.drawImage(artCache.get(absoluteAlbumArtUri), 0, 0, 100, 100)
+		console.log(await artCache.get(absoluteAlbumArtUri))
+		ctx.putImageData(await artCache.get(absoluteAlbumArtUri),0,0);
 	}
 
 	if (lastVolumeChangeTime > Date.now() - 2000) {
@@ -74,6 +85,12 @@ async function drawLcdFromSonos(streamDeck) {
 	console.timeEnd('lcd')
 
 	const reports = streamDeck.device.generateFillLcdWrites(0, 0, buffer, { width: 800, height: 100 })
+	if (sonosState.playbackState === 'PLAYING') {
+		drawButton(streamDeck, 1, buttonsIcon[1], "green", "black")
+	} else {
+		drawButton(streamDeck, 1, buttonsIcon[1], "white", "black")
+	}
+
 	await streamDeck.device.device.sendReports(reports)
 }
 
@@ -92,17 +109,11 @@ async function getSonosState() {
 	const responseJson = await response.json();
 	state.sonosState = responseJson;
 
-	if (responseJson.playbackState === 'PLAYING') {
-		drawButton(streamDeck, 1, buttonsIcon[1], "black", "white")
-	} else {
-		drawButton(streamDeck, 1, buttonsIcon[1], "white", "black")
-	}
-
 	artCache.fetch(responseJson.currentTrack.absoluteAlbumArtUri);
 	drawLcdFromSonosDebounced();
 }
 
-const drawLcdFromSonosDebounced = pDebounce(drawLcdFromSonos.bind(null, streamDeck), 20, { before: false });
+const drawLcdFromSonosDebounced = pDebounce(render.bind(null, streamDeck), 20, { before: false });
 const getSonosStateDebounced = pDebounce(getSonosState, 20, { before: false });
 
 getSonosStateDebounced();
