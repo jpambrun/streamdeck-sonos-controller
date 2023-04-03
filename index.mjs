@@ -1,7 +1,7 @@
 import { openStreamDeck } from '@elgato-stream-deck/node'
 import { createCanvas, registerFont, loadImage } from 'canvas'
 import pDebounce from 'p-debounce';
-import { fav, next, prev, plaupause } from './icons.mjs';
+import { fav, next, prev, plaupause, shuffle } from './icons.mjs';
 import LRUCache from 'lru-cache'
 import EventSource from 'eventsource'
 
@@ -90,14 +90,18 @@ async function render(streamDeck) {
 		drawButton(streamDeck, 1, buttonsIcon[1], "white", "black")
 	}
 
+
+	if (sonosState?.playMode?.shuffle) {
+		drawButton(streamDeck, 3, buttonsIcon[3], "green", "black")
+	} else {
+		drawButton(streamDeck, 3, buttonsIcon[3], "white", "black")
+	}
 	await streamDeck.device.device.sendReports(reports)
 }
 
 registerFont('font.ttf', { family: 'JetBrainsMono Nerd Font Mono', weight: 'Book' })
 const streamDeck = openStreamDeck()
 
-
-//streamDeck.clearPanel()
 const state = {
 	sonosState: undefined,
 	lastVolumeChangeTime: 0,
@@ -134,17 +138,14 @@ es.onmessage = (e) => {
 	}
 }
 
-const buttonsIcon = [prev, plaupause, next, fav, 1, 2, 3, 4]
+const buttonsIcon = [prev, plaupause, next, shuffle, 1, 2, 3, 4]
 const downFct = [
-	async () => {
-		await fetch("http://127.0.0.1:5005/JF%27s%20Office/previous");
-	},
-	async () => {
-		await fetch("http://127.0.0.1:5005/JF%27s%20Office/playpause");
-	},
-	async () => {
-		await fetch("http://127.0.0.1:5005/JF%27s%20Office/next");
-	},
+	async () =>  await fetch("http://127.0.0.1:5005/JF%27s%20Office/previous") ,
+	async () =>  await fetch("http://127.0.0.1:5005/JF%27s%20Office/playpause") ,
+	async () =>  await fetch("http://127.0.0.1:5005/JF%27s%20Office/next") ,
+	async ()=>  await fetch("http://127.0.0.1:5005/jf%27s%20office/shuffle/toggle"),
+	async () =>  await fetch("http://127.0.0.1:5005/JF%27s%20Office/playlist/work") ,
+	
 ]
 const encoderFct = [
 	async (amount) => {

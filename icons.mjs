@@ -1,1 +1,1 @@
-export const fav = '', next = '󰒭', prev = '󰒮',plaupause = '󰐎'
+export const fav = '', next = '󰒭', prev = '󰒮',plaupause = '󰐎', shuffle = '󰒟'
