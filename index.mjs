@@ -2,7 +2,7 @@ import { openStreamDeck } from '@elgato-stream-deck/node'
 import { createCanvas, registerFont, loadImage } from 'canvas'
 import pDebounce from 'p-debounce';
 import { fav, next, prev, plaupause, shuffle } from './icons.mjs';
-import LRUCache from 'lru-cache'
+import { LRUCache } from 'lru-cache'
 import EventSource from 'eventsource'
 
 const es = new EventSource('http://127.0.0.1:5005/events');
@@ -100,7 +100,7 @@ async function render(streamDeck) {
 }
 
 registerFont('font.ttf', { family: 'JetBrainsMono Nerd Font Mono', weight: 'Book' })
-const streamDeck = openStreamDeck()
+const streamDeck = await openStreamDeck('/dev/hidraw0')
 
 const state = {
 	sonosState: undefined,

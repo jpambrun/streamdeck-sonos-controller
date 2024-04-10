@@ -9,11 +9,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@elgato-stream-deck/node": "^5.7.2",
+    "@elgato-stream-deck/node": "^6.0.0",
     "@julusian/jpeg-turbo": "^2.1.0",
-    "canvas": "^2.11.0",
+    "canvas": "^2.11.2",
     "eventsource": "^2.0.2",
-    "lru-cache": "^8.0.4",
+    "lru-cache": "^10.2.0",
     "p-debounce": "^4.0.0"
   }
 }
