@@ -1,1 +1,1 @@
-export const fav = '', next = '󰒭', prev = '󰒮',plaupause = '󰐎', shuffle = '󰒟'
+export const fav = '', next = '󰒭', prev = '󰒮',plaupause = '󰐎', shuffle = '󰒟', wifi_reset = '󱛄', wifi = '󰖩'
