@@ -100,6 +100,7 @@ const state = {
 async function getSonosState() {
 	const response = await fetch("http://127.0.0.1:5005/JF%27s%20Office/state");
 	const responseJson = await response.json();
+	reactToSonosStateChange(state.sonosState, responseJson)
 	state.sonosState = responseJson;
 
 	artCache.fetch(responseJson.currentTrack.absoluteAlbumArtUri);
@@ -112,6 +113,23 @@ const getSonosStateDebounced = pDebounce(getSonosState, 20, { before: false });
 getSonosStateDebounced();
 setInterval(getSonosStateDebounced, 500);
 
+const reactToSonosStateChange = (prevState, curState) =>{
+	if (prevState?.playbackState !== curState?.playbackState) {
+		if (curState.playbackState === 'PLAYING') {
+			drawButton(streamDeck, 1, buttonsIcon[1], "green", "black")
+		} else {
+			drawButton(streamDeck, 1, buttonsIcon[1], "white", "black")
+		}
+	}
+	if (prevState?.playMode?.shuffle !== curState?.playMode?.shuffle) {
+		if (curState?.playMode?.shuffle) {
+			drawButton(streamDeck, 3, buttonsIcon[3], "green", "black")
+		} else {
+			drawButton(streamDeck, 3, buttonsIcon[3], "white", "black")
+		}
+	}
+}
+
 es.onmessage = (e) => {
 	const msg = JSON.parse(e.data);
 	const { type, data } = msg;
@@ -121,21 +139,7 @@ es.onmessage = (e) => {
 		state.sonosState.volume = data.newVolume;
 		drawLcdFromSonosDebounced(streamDeck)
 	} else if (type === 'transport-state') {
-		if (data.state.playbackState !== state.sonosState?.playbackState) {
-			if (data.state.playbackState.playbackState === 'PLAYING') {
-				drawButton(streamDeck, 1, buttonsIcon[1], "green", "black")
-			} else {
-				drawButton(streamDeck, 1, buttonsIcon[1], "white", "black")
-			}
-		}
-		if (data.state.playMode.shuffle !== state.sonosState?.playMode?.shuffle) {
-			if (data.state.playMode.shuffle) {
-				drawButton(streamDeck, 3, buttonsIcon[3], "green", "black")
-			} else {
-				drawButton(streamDeck, 3, buttonsIcon[3], "white", "black")
-			}
-		}
-
+		reactToSonosStateChange(state.sonosState, data.state)
 		state.sonosState = data.state;
 		drawLcdFromSonosDebounced(streamDeck)
 	} else {
