@@ -72,7 +72,7 @@ async function reconnectAllDevices(site) {
     const allClient = await site.clients.list3();
     for (let i = 0; i < allClient.length; i++) {
         const client = allClient[i];
-        if (client.isWired === false) {
+        if (client.isWired === false && client.mac !== 'b8:27:eb:02:8f:8c') {
             console.log(`reconnecting ${client.hostname || 'unknown'} from ${client.oui} with mac ${client.mac}`);
             await kickDevice(site, client.mac);
         }
